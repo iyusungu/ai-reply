@@ -333,7 +333,14 @@
 
         <div id="teaching-log" class="workspace active">
             <div class="left-panel">
-                <div class="panel-title">輸入區 (貼上原始教學日誌)</div>
+                <div class="panel-title">輸入與設定</div>
+                
+                <div class="ai-instruction-box">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">AI 回覆風格指令 (選填)</label>
+                    <input type="text" id="teaching-style-instruction" placeholder="例如：語氣要更活潑一點、特別稱讚數學教學...">
+                </div>
+
+                <div class="panel-title">日誌內容 (貼上原始教學日誌)</div>
                 <textarea id="teaching-input" style="flex: 1;" placeholder="請在此貼上雜亂的教學日誌內容..."></textarea>
                 <button id="btn-gen-teaching" class="action-btn" onclick="generateTeachingLog()">產生回覆</button>
             </div>
@@ -463,7 +470,7 @@
                     parts: [{ text: systemPrompt }]
                 },
                 generationConfig: {
-                    temperature: 0.7,
+                    temperature: 0.5,
                 }
             };
 
@@ -491,6 +498,9 @@
         // --- Feature 1: Teaching Log ---
         async function generateTeachingLog() {
             const input = document.getElementById('teaching-input').value;
+            // 抓取新的指令欄位
+            const styleInstruction = document.getElementById('teaching-style-instruction').value;
+            
             if (!input.trim()) {
                 alert('請輸入內容');
                 return;
@@ -504,37 +514,44 @@
             outputDiv.innerHTML = '';
 
             const systemPrompt = `
-                你是一個專業的教學日誌回覆助手。請遵循以下規則：
-                1. **解析輸入與辨識姓名**：
-                   - 使用者會貼上從網頁表格複製的雜亂文字，請仔細分辨「大學伴(老師)」與「小學伴(學生)」。
-                   - **典型表格資料順序**：通常為 [日期] -> [時間] -> [大學校名] -> [小學校名] -> **[大學伴姓名]** -> [小學伴姓名] -> [內容]。
-                   - **關鍵辨識邏輯**：
-                     - 當看到連續的學校名稱（如：國立嘉義大學...中學）後接續出現的兩個名字，**第一個名字**通常是大學伴，第二個是小學伴。
-                     - 範例：輸入「國立嘉義大學 南投縣立草屯國民中學 劉宥君 洪榮鴻」，大學伴是「劉宥君」（要對他回覆），小學伴是「洪榮鴻」。
-                     - 請務必抓取「大學伴」的名字作為回覆對象。
+                你是一個專業的教學日誌回覆助手。使用者提供的資料是從「教育部數位學伴計畫後台」直接複製的表格文字。
+                資料格式非常混亂，請務必嚴格遵守以下解析邏輯：
+
+                ### 1. 姓名解析邏輯（最重要）
+                資料中每一筆日誌的開頭結構通常如下：
+                Step 1: 找到文字 \`國立嘉義大學\` (這是固定錨點)。
+                Step 2: \`國立嘉義大學\` 的 **正後方** 接的文字結構是： \`[夥伴學校名稱][大學伴姓名]\` (這兩者通常黏在一起，中間沒有空格)。
+                Step 3: 請將學校名稱與人名切開。**緊接在學校名稱後面的人名，就是我們要回覆的對象「大學伴」**。
+                Step 4: 在大學伴姓名之後，可能會出現 \`（代課）\`，請忽略此標籤。
+                Step 5: 接下來出現的名字是 \`小學伴\` (學生)，如果是原住民姓名可能會有中間點 (如 \`哈勇•瑪籟\`)，請不要把它誤認為大學伴。
+
+                **正確解析範例：**
+                原始文字：\`國立嘉義大學 南投縣立草屯國民中學韓慧盈 （代課） 哈勇•瑪籟\`
+                - **大學伴 (Teacher)**：韓慧盈
+                - 小學伴 (Student)：哈勇•瑪籟
+
+                ### 2. 姓名稱呼規則
+                - 取得大學伴姓名後：
+                   - 單姓複名，只稱呼名（如：韓慧盈 -> 慧盈）。
+                   - 單名或複姓，稱呼全名。
+
+                ### 3. 內容檢查與回覆 (Style Section)
+                - 內容範圍：從 \`（出席）\` 或 \`（缺席）\` 之後開始，直到下一筆資料的日期或結束。
+                - 字數檢查：若內容少於 5 個字，回覆：「請多寫一點，以便更全面地了解學生的學習狀況。」
+                - 示警偵測：檢查內容是否有霸凌、衝突、性平、家暴等關鍵字。若有，標記 \`hasWarning: true\`。
                 
-                2. **姓名格式處理**：
-                   - 辨識出大學伴姓名後：
-                   - 若為單姓複名（如：劉宥君），只稱呼名（宥君）。
-                   - 若為單名（如：李偉）或複姓（如：歐陽琮），請稱呼全名。
+                **[使用者自定義風格]：**
+                使用者指定了以下回覆風格： "${styleInstruction || '無 (請使用預設風格)'}"
+                
+                **[預設/最終回覆原則]**：
+                1. 若有使用者自定義風格，請依據其要求調整語氣或重點。
+                2. 若無自定義，請保持：非常正向、鼓勵性質。
+                3. **開頭固定**：無論風格為何，開頭必須使用「謝謝[稱呼]用心準備教學」。
+                4. **禁止 Emoji**：絕對不可使用任何 Emoji。
 
-                3. **內容檢查規則**：
-                   - [重要] 如果該名學生的日誌內容描述少於 5 個字（過於簡略），回覆內容請直接寫：「請多寫一點，以便更全面地了解學生的學習狀況。」
-
-                4. **安全示警偵測**（最優先）：
-                   - 請詳細檢查日誌內容是否包含：霸凌、被欺負、肢體/言語衝突、打架、性平事件（騷擾、性別歧視）、家暴、家庭失能等關鍵字或情境。
-                   - 若偵測到上述危險內容，請在輸出中標記 \`hasWarning: true\` 並在 \`warningReason\` 填寫警告類型（例如：警告：疑似霸凌事件）。
-                   - 若無，則 \`hasWarning: false\`。
-
-                5. **回覆生成原則**：
-                   - 語氣：非常正向、鼓勵性質。
-                   - 開頭：固定使用「謝謝[處理後的姓名]用心準備教學」。
-                   - 內容：鼓勵他這週的表現，並給予可以進步的建議（不用寫建議二字）。
-                   - **嚴格禁止使用任何 Emoji**。
-
-                6. **輸出格式**：
-                   - 請直接回覆一個 JSON 陣列 (Array of Objects)，不要有 markdown code block 標記。
-                   - 格式：[{"name": "顯示姓名", "reply": "回覆內容", "hasWarning": boolean, "warningReason": "警告文字(若無則空字串)"}, ...]
+                ### 4. 輸出格式
+                請直接回覆 JSON 陣列，不要用 markdown block：
+                [{"name": "顯示姓名", "reply": "回覆內容", "hasWarning": boolean, "warningReason": "..."}]
             `;
 
             try {
