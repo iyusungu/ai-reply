@@ -449,7 +449,7 @@
             }
         }
 
-        // --- Core AI Function ---
+        // --- Core AI Function (Updated for Fallback) ---
         async function callGeminiAPI(systemPrompt, userPrompt) {
             if (!apiKey) {
                 alert('請先設定 API Key');
@@ -457,48 +457,66 @@
                 throw new Error('No API Key');
             }
 
-            // Using standard endpoint structure.
-            const model = "gemini-2.0-flash"; 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            // 定義模型優先順序
+            const modelPriority = ["gemini-2.5-pro", "gemini-2.5-flash"];
+            
+            let lastError = null;
+            let successData = null;
 
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [{ text: userPrompt }]
-                }],
-                system_instruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    temperature: 0.5,
+            // 嘗試迴圈
+            for (const model of modelPriority) {
+                try {
+                    // console.log(`Attempting to use model: ${model}`);
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+                    const payload = {
+                        contents: [{
+                            role: "user",
+                            parts: [{ text: userPrompt }]
+                        }],
+                        system_instruction: {
+                            parts: [{ text: systemPrompt }]
+                        },
+                        generationConfig: {
+                            temperature: 0.5,
+                        }
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(`${model} Error: ${data.error.message}`);
+                    }
+
+                    // 如果成功，儲存資料並跳出迴圈
+                    successData = data.candidates[0].content.parts[0].text;
+                    break; 
+
+                } catch (error) {
+                    console.warn(`Model ${model} failed. Trying next...`, error);
+                    lastError = error;
+                    // 繼續嘗試下一個模型
                 }
-            };
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error.message);
-                }
-
-                return data.candidates[0].content.parts[0].text;
-            } catch (error) {
-                console.error('API Error:', error);
-                alert(`API Error: ${error.message}. 請確認 Key 是否正確或模型是否可用。`);
-                throw error;
             }
+
+            // 如果全部嘗試失敗
+            if (!successData) {
+                alert(`API Error: 所有模型皆無法回應。\n最後錯誤: ${lastError.message}`);
+                throw lastError;
+            }
+
+            return successData;
         }
 
         // --- Feature 1: Teaching Log ---
         async function generateTeachingLog() {
             const input = document.getElementById('teaching-input').value;
-            // 抓取新的指令欄位
             const styleInstruction = document.getElementById('teaching-style-instruction').value;
             
             if (!input.trim()) {
