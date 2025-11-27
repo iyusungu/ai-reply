@@ -24,6 +24,7 @@
 
             --border-radius: 12px;
             --spacing: 20px;
+            --sidebar-width: 250px;
         }
 
         * {
@@ -41,22 +42,39 @@
             overflow: hidden;
         }
 
-        /* Sidebar */
+        /* --- Sidebar --- */
         .sidebar {
-            width: 250px;
+            width: var(--sidebar-width);
             background-color: var(--sidebar-bg);
             padding: var(--spacing);
             display: flex;
             flex-direction: column;
             gap: 10px;
             border-right: 1px solid #333;
+            transition: all 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        /* 完全收合狀態 */
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            border: none;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
         }
 
         .sidebar h2 {
-            margin-bottom: 20px;
             font-size: 1.2rem;
             color: var(--text-main);
-            text-align: center;
             font-weight: bold;
         }
 
@@ -70,12 +88,44 @@
             border-radius: var(--border-radius);
             transition: all 0.3s ease;
             font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .nav-btn.active, .nav-btn:hover {
             background-color: var(--accent-color);
             color: #121212;
             font-weight: bold;
+        }
+
+        /* Model Selector in Sidebar */
+        .model-selector-container {
+            margin-top: auto; 
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+
+        .model-selector-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .model-select {
+            width: 100%;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .model-select:hover {
+            border-color: var(--accent-color);
         }
 
         /* Main Content */
@@ -85,6 +135,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
+            min-width: 0; 
         }
 
         .header {
@@ -94,6 +145,33 @@
             margin-bottom: var(--spacing);
             padding-bottom: 10px;
             border-bottom: 1px solid #333;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Toggle Button (Hamburger) */
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-muted);
+        }
+
+        .toggle-btn:hover .toggle-icon {
+            fill: var(--text-main);
         }
 
         .api-btn {
@@ -115,7 +193,8 @@
             display: none;
             flex: 1;
             gap: var(--spacing);
-            height: calc(100% - 60px);
+            overflow: hidden; 
+            margin-bottom: 30px; 
         }
 
         .workspace.active {
@@ -130,6 +209,7 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            min-width: 300px;
         }
 
         .panel-title {
@@ -178,6 +258,35 @@
             color: #888;
         }
 
+        /* --- Status Bar --- */
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background-color: var(--bg-color);
+            border-top: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 20px;
+            gap: 20px;
+            font-size: 0.8rem;
+            color: #777;
+            z-index: 10;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-item span {
+            color: #aaa;
+        }
+
         /* Teaching Log Specifics */
         .log-entry-card {
             background-color: var(--input-bg);
@@ -188,7 +297,6 @@
             transition: background-color 0.3s;
         }
 
-        /* 示警樣式 */
         .log-entry-card.alert {
             background-color: var(--alert-bg);
             border-left-color: var(--alert-border);
@@ -319,15 +427,35 @@
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>日誌回覆產生器</h2>
-        <button class="nav-btn active" onclick="switchTab('teaching-log')">教學日誌</button>
-        <button class="nav-btn" onclick="switchTab('class-log')">帶班日誌</button>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>日誌產生器</h2>
+        </div>
+        
+        <button class="nav-btn active" onclick="switchTab('teaching-log')">
+            教學日誌
+        </button>
+        <button class="nav-btn" onclick="switchTab('class-log')">
+            帶班日誌
+        </button>
+
+        <div class="model-selector-container">
+            <label class="model-selector-label">連線模型 (Model)</label>
+            <select id="model-select" class="model-select" onchange="handleModelChange()">
+                </select>
+        </div>
     </div>
 
     <div class="main-content">
         <div class="header">
-            <h1 id="page-title">教學日誌</h1>
+            <div class="header-left">
+                <button class="toggle-btn" onclick="toggleSidebar()" title="切換選單">
+                    <svg class="toggle-icon" viewBox="0 0 24 24">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <h1 id="page-title">教學日誌</h1>
+            </div>
             <button class="api-btn" onclick="openModal()">修改 API Key</button>
         </div>
 
@@ -393,6 +521,14 @@
                 </div>
             </div>
         </div>
+
+        <div class="status-bar">
+            <div class="status-item">Model: <span id="status-model">Wait</span></div>
+            <div class="status-item">|</div>
+            <div class="status-item">Requests: <span id="status-req">0</span></div>
+            <div class="status-item">|</div>
+            <div class="status-item">Total Tokens: <span id="status-tokens">0</span></div>
+        </div>
     </div>
 
     <div id="api-modal" class="modal-overlay">
@@ -409,13 +545,58 @@
     <script>
         // --- State Management ---
         let apiKey = localStorage.getItem('google_ai_api_key');
+        let requestCount = 0;
+        let totalTokenCount = 0;
+
+        // User Preferred Models
+        const modelList = [
+            "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", 
+            "gemini-2.0-flash-001", "gemini-2.0-flash-lite-001", "gemini-2.0-flash-lite", 
+            "gemini-2.0-flash-lite-preview-02-05", "gemini-2.0-flash-lite-preview", 
+            "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest", 
+            "gemini-2.5-flash-lite", "gemini-2.5-flash-preview-09-2025", 
+            "gemini-2.5-flash-lite-preview-09-2025", "gemini-robotics-er-1.5-preview"
+        ];
         
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             if (!apiKey) {
                 document.getElementById('api-modal').style.display = 'flex';
             }
+            initModelSelector();
+            updateStatusBar();
         });
+
+        function initModelSelector() {
+            const select = document.getElementById('model-select');
+            modelList.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.text = model;
+                select.appendChild(option);
+            });
+            if (modelList.length > 0) select.value = modelList[0];
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // 當切換模型時觸發
+        function handleModelChange() {
+            // 重置計數器
+            requestCount = 0;
+            totalTokenCount = 0;
+            updateStatusBar();
+        }
+
+        function updateStatusBar() {
+            const currentModel = document.getElementById('model-select').value;
+            document.getElementById('status-model').innerText = currentModel;
+            document.getElementById('status-req').innerText = requestCount;
+            document.getElementById('status-tokens').innerText = totalTokenCount.toLocaleString();
+        }
 
         // --- Navigation ---
         function switchTab(tabId) {
@@ -449,7 +630,7 @@
             }
         }
 
-        // --- Core AI Function (Updated for Fallback) ---
+        // --- Core AI Function (Updated) ---
         async function callGeminiAPI(systemPrompt, userPrompt) {
             if (!apiKey) {
                 alert('請先設定 API Key');
@@ -457,61 +638,51 @@
                 throw new Error('No API Key');
             }
 
-            // 定義模型優先順序
-            const modelPriority = ["gemini-2.5-pro", "gemini-2.5-flash"];
+            // 從選單獲取當前選擇的模型
+            const selectedModel = document.getElementById('model-select').value;
             
-            let lastError = null;
-            let successData = null;
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
 
-            // 嘗試迴圈
-            for (const model of modelPriority) {
-                try {
-                    // console.log(`Attempting to use model: ${model}`);
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-                    const payload = {
-                        contents: [{
-                            role: "user",
-                            parts: [{ text: userPrompt }]
-                        }],
-                        system_instruction: {
-                            parts: [{ text: systemPrompt }]
-                        },
-                        generationConfig: {
-                            temperature: 0.5,
-                        }
-                    };
-
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        throw new Error(`${model} Error: ${data.error.message}`);
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: userPrompt }]
+                    }],
+                    system_instruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                    generationConfig: {
+                        temperature: 0.5,
                     }
+                };
 
-                    // 如果成功，儲存資料並跳出迴圈
-                    successData = data.candidates[0].content.parts[0].text;
-                    break; 
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                } catch (error) {
-                    console.warn(`Model ${model} failed. Trying next...`, error);
-                    lastError = error;
-                    // 繼續嘗試下一個模型
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(`${selectedModel} Error: ${data.error.message}`);
                 }
-            }
 
-            // 如果全部嘗試失敗
-            if (!successData) {
-                alert(`API Error: 所有模型皆無法回應。\n最後錯誤: ${lastError.message}`);
-                throw lastError;
-            }
+                // 統計數據更新
+                requestCount++;
+                if (data.usageMetadata && data.usageMetadata.totalTokenCount) {
+                    totalTokenCount += data.usageMetadata.totalTokenCount;
+                }
+                updateStatusBar();
 
-            return successData;
+                return data.candidates[0].content.parts[0].text;
+
+            } catch (error) {
+                console.error("API Call Failed", error);
+                alert(`請求失敗: ${error.message}`);
+                throw error;
+            }
         }
 
         // --- Feature 1: Teaching Log ---
