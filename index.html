@@ -17,10 +17,15 @@
             --accent-color: #b0b0b0; 
             --accent-hover: #d1d1d1;
             
-            /* 警示色系 */
-            --alert-bg: #3d1a1a;
-            --alert-border: #ff4444;
-            --alert-text: #ffcccc;
+            /* 警示色系 (Red - 危險/嚴重) - Muted */
+            --alert-bg: #382828;
+            --alert-border: #c06060;
+            --alert-text: #e8dada;
+
+            /* 注意色系 (Yellow - 態度/學習狀況) - Muted */
+            --caution-bg: #363328;
+            --caution-border: #b8a860;
+            --caution-text: #e8e6da;
 
             --border-radius: 12px;
             --spacing: 20px;
@@ -297,11 +302,6 @@
             transition: background-color 0.3s;
         }
 
-        .log-entry-card.alert {
-            background-color: var(--alert-bg);
-            border-left-color: var(--alert-border);
-        }
-
         .log-name {
             font-weight: bold;
             margin-bottom: 8px;
@@ -310,28 +310,43 @@
             align-items: center;
             gap: 10px;
         }
-
-        .log-entry-card.alert .log-name {
-            color: var(--alert-border);
-        }
-
-        .warning-tag {
-            background-color: var(--alert-border);
-            color: white;
-            font-size: 0.75rem;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: normal;
-            letter-spacing: 0.5px;
-        }
-
+        
         .log-content {
             line-height: 1.6;
             white-space: pre-wrap;
         }
 
+        /* Red Alert Styles (Muted) */
+        .log-entry-card.alert {
+            background-color: var(--alert-bg);
+            border-left-color: var(--alert-border);
+        }
+        .log-entry-card.alert .log-name {
+            color: var(--alert-border);
+        }
         .log-entry-card.alert .log-content {
             color: var(--alert-text);
+        }
+
+        /* Yellow Caution Styles (Muted) */
+        .log-entry-card.caution {
+            background-color: var(--caution-bg);
+            border-left-color: var(--caution-border);
+        }
+        .log-entry-card.caution .log-name {
+            color: var(--caution-border);
+        }
+        .log-entry-card.caution .log-content {
+            color: var(--caution-text);
+        }
+
+        /* Warning Tag */
+        .warning-tag {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: normal;
+            letter-spacing: 0.5px;
         }
 
         /* Class Management Specifics */
@@ -344,12 +359,88 @@
             color: var(--text-muted);
             font-size: 0.9rem;
         }
+        
+        /* AI Instruction Box Styles */
         .ai-instruction-box {
             background-color: #252525;
             padding: 10px;
             border-radius: var(--border-radius);
             margin-bottom: 20px;
             border: 1px solid var(--accent-color);
+        }
+
+        .instruction-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .instruction-input-wrapper input {
+            margin-bottom: 0; 
+        }
+
+        .save-style-btn {
+            background-color: #444;
+            color: var(--text-main);
+            border: 1px solid #555;
+            padding: 0 15px;
+            height: 45px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .save-style-btn:hover {
+            background-color: #555;
+            border-color: var(--accent-color);
+        }
+
+        .saved-styles-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .style-chip {
+            background-color: #3a3a3a;
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .style-chip:hover {
+            background-color: #505050;
+            color: white;
+            border-color: #777;
+        }
+
+        .delete-style-icon {
+            color: #888;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+        }
+
+        .delete-style-icon:hover {
+            color: #ff6b6b;
+            background-color: rgba(255, 255, 255, 0.1);
         }
         
         .result-section h3 {
@@ -442,7 +533,7 @@
         <div class="model-selector-container">
             <label class="model-selector-label">連線模型 (Model)</label>
             <select id="model-select" class="model-select" onchange="handleModelChange()">
-                </select>
+            </select>
         </div>
     </div>
 
@@ -465,7 +556,12 @@
                 
                 <div class="ai-instruction-box">
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">AI 回覆風格指令 (選填)</label>
-                    <input type="text" id="teaching-style-instruction" placeholder="例如：語氣要更活潑一點、特別稱讚數學教學...">
+                    <div class="instruction-input-wrapper">
+                        <input type="text" id="teaching-style-instruction" placeholder="例如：語氣要更活潑一點、特別稱讚數學教學...">
+                        <button class="save-style-btn" onclick="saveCurrentStyle()">儲存風格</button>
+                    </div>
+                    <div id="saved-styles-container" class="saved-styles-area">
+                        </div>
                 </div>
 
                 <div class="panel-title">日誌內容 (貼上原始教學日誌)</div>
@@ -475,7 +571,7 @@
             <div class="right-panel">
                 <div class="panel-title">AI 回覆區</div>
                 <div id="teaching-output">
-                    </div>
+                </div>
             </div>
         </div>
 
@@ -565,6 +661,7 @@
             }
             initModelSelector();
             updateStatusBar();
+            renderSavedStyles();
         });
 
         function initModelSelector() {
@@ -583,9 +680,7 @@
             sidebar.classList.toggle('collapsed');
         }
 
-        // 當切換模型時觸發
         function handleModelChange() {
-            // 重置計數器
             requestCount = 0;
             totalTokenCount = 0;
             updateStatusBar();
@@ -598,6 +693,81 @@
             document.getElementById('status-tokens').innerText = totalTokenCount.toLocaleString();
         }
 
+        // --- Style Management Functions ---
+        function getSavedStyles() {
+            const styles = localStorage.getItem('teaching_log_styles');
+            return styles ? JSON.parse(styles) : [];
+        }
+
+        function renderSavedStyles() {
+            const container = document.getElementById('saved-styles-container');
+            const styles = getSavedStyles();
+            
+            container.innerHTML = '';
+            
+            if (styles.length === 0) return;
+
+            styles.forEach((style, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'style-chip';
+                chip.onclick = () => applyStyle(style.prompt);
+                
+                const textSpan = document.createElement('span');
+                textSpan.innerText = style.name;
+                chip.appendChild(textSpan);
+
+                const deleteIcon = document.createElement('span');
+                deleteIcon.className = 'delete-style-icon';
+                deleteIcon.innerHTML = '&times;';
+                deleteIcon.title = '刪除此風格';
+                deleteIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteStyle(index);
+                };
+                chip.appendChild(deleteIcon);
+
+                container.appendChild(chip);
+            });
+        }
+
+        function saveCurrentStyle() {
+            const inputVal = document.getElementById('teaching-style-instruction').value.trim();
+            if (!inputVal) {
+                alert('請先在輸入框中輸入您想要儲存的指令風格。');
+                return;
+            }
+
+            const styleName = prompt('請為這個風格取一個名稱（例如：嚴格版、活潑版）：');
+            if (styleName && styleName.trim()) {
+                const styles = getSavedStyles();
+                styles.push({
+                    name: styleName.trim(),
+                    prompt: inputVal
+                });
+                localStorage.setItem('teaching_log_styles', JSON.stringify(styles));
+                renderSavedStyles();
+            }
+        }
+
+        function applyStyle(promptText) {
+            const input = document.getElementById('teaching-style-instruction');
+            input.value = promptText;
+            
+            input.style.borderColor = '#fff';
+            setTimeout(() => {
+                input.style.borderColor = '#555';
+            }, 300);
+        }
+
+        function deleteStyle(index) {
+            if (confirm('確定要刪除這個儲存的風格嗎？')) {
+                const styles = getSavedStyles();
+                styles.splice(index, 1);
+                localStorage.setItem('teaching_log_styles', JSON.stringify(styles));
+                renderSavedStyles();
+            }
+        }
+
         // --- Navigation ---
         function switchTab(tabId) {
             document.querySelectorAll('.workspace').forEach(el => el.classList.remove('active'));
@@ -605,11 +775,8 @@
             
             document.getElementById(tabId).classList.add('active');
             
-            // Set active button state
             const btnIndex = tabId === 'teaching-log' ? 0 : 1;
             document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
-
-            // Set Title
             document.getElementById('page-title').innerText = tabId === 'teaching-log' ? '教學日誌' : '帶班日誌';
         }
 
@@ -630,7 +797,7 @@
             }
         }
 
-        // --- Core AI Function (Updated) ---
+        // --- Core AI Function ---
         async function callGeminiAPI(systemPrompt, userPrompt) {
             if (!apiKey) {
                 alert('請先設定 API Key');
@@ -638,7 +805,6 @@
                 throw new Error('No API Key');
             }
 
-            // 從選單獲取當前選擇的模型
             const selectedModel = document.getElementById('model-select').value;
             
             try {
@@ -669,7 +835,6 @@
                     throw new Error(`${selectedModel} Error: ${data.error.message}`);
                 }
 
-                // 統計數據更新
                 requestCount++;
                 if (data.usageMetadata && data.usageMetadata.totalTokenCount) {
                     totalTokenCount += data.usageMetadata.totalTokenCount;
@@ -685,7 +850,7 @@
             }
         }
 
-        // --- Feature 1: Teaching Log ---
+        // --- Feature 1: Teaching Log (Updated Logic) ---
         async function generateTeachingLog() {
             const input = document.getElementById('teaching-input').value;
             const styleInstruction = document.getElementById('teaching-style-instruction').value;
@@ -707,49 +872,43 @@
                 資料格式非常混亂，請務必嚴格遵守以下解析邏輯：
 
                 ### 1. 姓名解析邏輯（最重要）
-                資料中每一筆日誌的開頭結構通常如下：
-                Step 1: 找到文字 \`國立嘉義大學\` (這是固定錨點)。
-                Step 2: \`國立嘉義大學\` 的 **正後方** 接的文字結構是： \`[夥伴學校名稱][大學伴姓名]\` (這兩者通常黏在一起，中間沒有空格)。
-                Step 3: 請將學校名稱與人名切開。**緊接在學校名稱後面的人名，就是我們要回覆的對象「大學伴」**。
-                Step 4: 在大學伴姓名之後，可能會出現 \`（代課）\`，請忽略此標籤。
-                Step 5: 接下來出現的名字是 \`小學伴\` (學生)，如果是原住民姓名可能會有中間點 (如 \`哈勇•瑪籟\`)，請不要把它誤認為大學伴。
+                Step 1: 找到文字 \`國立嘉義大學\`。
+                Step 2: 其後緊接的是 \`[夥伴學校名稱][大學伴姓名]\`。
+                Step 3: 切開學校名稱與人名，取得「大學伴姓名」。
+                Step 4: 忽略 \`（代課）\`。
+                Step 5: 下一個是 \`小學伴\`。
 
-                **正確解析範例：**
-                原始文字：\`國立嘉義大學 南投縣立草屯國民中學韓慧盈 （代課） 哈勇•瑪籟\`
-                - **大學伴 (Teacher)**：韓慧盈
-                - 小學伴 (Student)：哈勇•瑪籟
+                ### 2. 內容檢查與狀態判斷 (Status Check)
+                請根據內容給予 \`status\` (狀態)：
+                - **'alert' (紅燈)**：內容涉及霸凌、衝突、性平、家暴、安全疑慮等嚴重事件。
+                - **'caution' (黃燈)**：標準放寬。只要內容提及學生**精神不佳、躁動、分心、注意力不集中、想睡覺、疲累、配合度低、學習意願不高**，或是任何關於學習態度、精神狀況的負面描述（即使是輕微的），都請歸類為此項。
+                - **'normal' (綠燈)**：無上述情況，一般正常教學紀錄。
 
-                ### 2. 姓名稱呼規則
-                - 取得大學伴姓名後：
-                   - 單姓複名，只稱呼名（如：韓慧盈 -> 慧盈）。
-                   - 單名或複姓，稱呼全名。
+                字數檢查：若內容少於 5 個字，回覆：「請多寫一點，以便更全面地了解學生的學習狀況。」
 
-                ### 3. 內容檢查與回覆 (Style Section)
-                - 內容範圍：從 \`（出席）\` 或 \`（缺席）\` 之後開始，直到下一筆資料的日期或結束。
-                - 字數檢查：若內容少於 5 個字，回覆：「請多寫一點，以便更全面地了解學生的學習狀況。」
-                - 示警偵測：檢查內容是否有霸凌、衝突、性平、家暴等關鍵字。若有，標記 \`hasWarning: true\`。
-                
-                **[使用者自定義風格]：**
-                使用者指定了以下回覆風格： "${styleInstruction || '無 (請使用預設風格)'}"
-                
-                **[預設/最終回覆原則]**：
-                1. 若有使用者自定義風格，請依據其要求調整語氣或重點。
-                2. 若無自定義，請保持：非常正向、鼓勵性質。
-                3. **開頭固定**：無論風格為何，開頭必須使用「謝謝[稱呼]用心準備教學」。
-                4. **禁止 Emoji**：絕對不可使用任何 Emoji。
+                ### 3. 回覆原則 (重要)
+                **[使用者自定義風格]：** "${styleInstruction || '無'}"
+                1. **優先權**：若有使用者自定義風格，請優先依據其要求調整，但仍需遵守下列結構與禁忌。
+                2. **內容深度 (重要)**：
+                   - 請詳細閱讀該筆日誌中的「學習狀況」、「教材參考與應用」、「教學單元進度」、「教學流程及教法」。
+                   - **必須**針對上述內容給予**具體**的回饋，不能只寫空泛的鼓勵。例如：提到具體的教學單元名稱、誇獎某個具體的教學方法或互動方式。
+                3. **語氣與建議方式**：
+                   - 保持正向、溫暖、鼓勵的語調。
+                   - 若有可改進之處，請用「正向引導」的方式提出，**嚴禁出現「建議」二字**。
+                   - 範例：「請繼續保持這種引導方式...」、「若能多嘗試...會更能引起動機...」、「期待看到更多...的互動」、「請繼續維持這樣的教學模式...」。
+                4. **固定開頭**：回覆**必須**以「謝謝[稱呼]用心準備教學」開頭。
+                5. **絕對禁止 Emoji**：任何表情符號都不可出現。
 
                 ### 4. 輸出格式
-                請直接回覆 JSON 陣列，不要用 markdown block：
-                [{"name": "顯示姓名", "reply": "回覆內容", "hasWarning": boolean, "warningReason": "..."}]
+                請直接回覆 JSON 陣列 (不要 markdown)：
+                [{"name": "...", "reply": "...", "status": "normal"|"caution"|"alert", "reason": "..."}]
             `;
 
             try {
-                // Pre-process prompt to ensure JSON output
                 const jsonPrompt = input + "\n\n請依據上述內容，產生符合規則的 JSON 陣列。";
                 
                 let rawText = await callGeminiAPI(systemPrompt, jsonPrompt);
                 
-                // Clean up markdown if AI adds it
                 rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
                 
                 const results = JSON.parse(rawText);
@@ -757,16 +916,26 @@
                 results.forEach(item => {
                     const card = document.createElement('div');
                     
-                    // Determine styles based on warning
-                    const isAlert = item.hasWarning === true;
-                    const alertClass = isAlert ? 'alert' : '';
-                    const warningHtml = isAlert ? `<span class="warning-tag">${item.warningReason}</span>` : '';
+                    // Logic for styles based on status
+                    let cardClass = '';
+                    let statusHtml = '';
+                    
+                    // Fallback for older prompts if status is undefined
+                    const status = item.status || (item.hasWarning ? 'alert' : 'normal');
 
-                    card.className = `log-entry-card ${alertClass}`;
+                    if (status === 'alert') {
+                        cardClass = 'alert';
+                        statusHtml = `<span class="warning-tag" style="background-color: var(--alert-border); color: white;">${item.reason || '安全疑慮'}</span>`;
+                    } else if (status === 'caution') {
+                        cardClass = 'caution';
+                        statusHtml = `<span class="warning-tag" style="background-color: var(--caution-border); color: #121212;">${item.reason || '學習狀況'}</span>`;
+                    }
+
+                    card.className = `log-entry-card ${cardClass}`;
                     card.innerHTML = `
                         <div class="log-name">
                             ${item.name}
-                            ${warningHtml}
+                            ${statusHtml}
                         </div>
                         <div class="log-content">${item.reply}</div>
                     `;
@@ -796,44 +965,27 @@
 
             const systemPrompt = `
                 你是一個帶班日誌助手。
-                你的任務是根據「當前內容」以及使用者的「指令」，重新生成或修改這三部分的日誌內容。
-                
-                欄位包含：
-                1. 系統環境
-                2. 整體學習狀況
-                3. 其他
-
+                任務：根據「當前內容」及「指令」，重新生成日誌。
                 規則：
-                - 若使用者沒有特殊指令，保持原樣或僅做修飾。
-                - 若有指令（例如：今天網路不穩），請將其自然融入對應的欄位（如系統環境）中，並重新編號。
-                - 保持專業、客觀的語氣。
-                - **嚴格禁止使用任何 Emoji**。
+                - 若有指令，自然融入並重新編號。
+                - 保持專業、客觀。
+                - **禁止 Emoji**。
                 - 使用繁體中文。
-                - 輸出格式：請直接回覆一個 JSON 物件，不要 markdown 標記。
-                - 格式：{"environment": "...", "learning": "...", "others": "..."}
+                - 輸出格式：JSON 物件 {"environment": "...", "learning": "...", "others": "..."}
             `;
 
             const userPrompt = `
                 【指令】：${instruction}
-
-                【目前內容 1. 系統環境】：
-                ${envText}
-
-                【目前內容 2. 整體學習狀況】：
-                ${learnText}
-
-                【目前內容 3. 其他】：
-                ${otherText}
+                【1. 系統環境】：${envText}
+                【2. 整體學習狀況】：${learnText}
+                【3. 其他】：${otherText}
             `;
 
             try {
                 let rawText = await callGeminiAPI(systemPrompt, userPrompt);
-                 // Clean up markdown
                 rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                
                 const result = JSON.parse(rawText);
 
-                // Render Output
                 outputDiv.innerHTML = `
                     <div class="result-section">
                         <h3>1. 系統環境</h3>
