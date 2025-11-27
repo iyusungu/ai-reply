@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日誌回覆產生器</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --sidebar-bg: #1e1e1e;
+            --card-bg: #2c2c2c;
+            --input-bg: #383838;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            
+            /* 灰色系按鈕 */
+            --accent-color: #b0b0b0; 
+            --accent-hover: #d1d1d1;
+            
+            /* 警示色系 */
+            --alert-bg: #3d1a1a;
+            --alert-border: #ff4444;
+            --alert-text: #ffcccc;
+
+            --border-radius: 12px;
+            --spacing: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            padding: var(--spacing);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-right: 1px solid #333;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: var(--text-main);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .nav-btn.active, .nav-btn:hover {
+            background-color: var(--accent-color);
+            color: #121212;
+            font-weight: bold;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing);
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .api-btn {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .api-btn:hover {
+            background-color: #444;
+        }
+
+        /* Workspace Layout */
+        .workspace {
+            display: none;
+            flex: 1;
+            gap: var(--spacing);
+            height: calc(100% - 60px);
+        }
+
+        .workspace.active {
+            display: flex;
+        }
+
+        .left-panel, .right-panel {
+            flex: 1;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: var(--spacing);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid #555;
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            resize: none;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .action-btn {
+            background-color: var(--accent-color);
+            color: #121212;
+            border: none;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            align-self: flex-end;
+        }
+
+        .action-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .action-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #888;
+        }
+
+        /* Teaching Log Specifics */
+        .log-entry-card {
+            background-color: var(--input-bg);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--accent-color);
+            transition: background-color 0.3s;
+        }
+
+        /* 示警樣式 */
+        .log-entry-card.alert {
+            background-color: var(--alert-bg);
+            border-left-color: var(--alert-border);
+        }
+
+        .log-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .log-entry-card.alert .log-name {
+            color: var(--alert-border);
+        }
+
+        .warning-tag {
+            background-color: var(--alert-border);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+        }
+
+        .log-content {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .log-entry-card.alert .log-content {
+            color: var(--alert-text);
+        }
+
+        /* Class Management Specifics */
+        .class-input-group {
+            margin-bottom: 15px;
+        }
+        .class-input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .ai-instruction-box {
+            background-color: #252525;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            border: 1px solid var(--accent-color);
+        }
+        
+        .result-section h3 {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .result-block {
+            background-color: var(--input-bg);
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>日誌回覆產生器</h2>
+        <button class="nav-btn active" onclick="switchTab('teaching-log')">教學日誌</button>
+        <button class="nav-btn" onclick="switchTab('class-log')">帶班日誌</button>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="page-title">教學日誌</h1>
+            <button class="api-btn" onclick="openModal()">修改 API Key</button>
+        </div>
+
+        <div id="teaching-log" class="workspace active">
+            <div class="left-panel">
+                <div class="panel-title">輸入區 (貼上原始教學日誌)</div>
+                <textarea id="teaching-input" style="flex: 1;" placeholder="請在此貼上雜亂的教學日誌內容..."></textarea>
+                <button id="btn-gen-teaching" class="action-btn" onclick="generateTeachingLog()">產生回覆</button>
+            </div>
+            <div class="right-panel">
+                <div class="panel-title">AI 回覆區</div>
+                <div id="teaching-output">
+                    </div>
+            </div>
+        </div>
+
+        <div id="class-log" class="workspace">
+            <div class="left-panel">
+                <div class="panel-title">輸入與設定</div>
+                
+                <div class="ai-instruction-box">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">AI 指令輸入區</label>
+                    <input type="text" id="class-instruction" placeholder="例如：今天網路不穩，有兩位大學伴斷線...">
+                </div>
+
+                <div class="class-input-group">
+                    <label>1. 系統環境</label>
+                    <textarea id="env-input" rows="5">1. 所有大學伴皆提早到教室準備，包含測試教材、耳麥、電腦、鏡頭等設備。
+2. 重複提醒大學伴確認耳麥以及鏡頭設定，避免小學伴因為干擾聽不清楚。
+3. 重複提醒大學伴開啟螢幕錄製。
+4. 確認大學伴教材分享畫面以及音訊清晰度。</textarea>
+                </div>
+
+                <div class="class-input-group">
+                    <label>2. 整體學習狀況</label>
+                    <textarea id="learning-input" rows="6">1. 大學伴與小學依據前次的前測與對於小學伴的適應性調整教材內容。
+2. 大多數大學伴皆可以融入Kahoot等數位教學平台，豐富教學內容。
+3. 部分大學伴會融入平板等第二台數位裝置，具體化呈現教學內容。
+4. 提醒大學伴盡量以自編以及融入課外知識編輯教材，並依據今天的課程進行難易度調整。
+5. 大學伴與小學伴多已建立默契，有些大學伴持續嘗試適合小學伴的教學方法，並隨時觀察調整。</textarea>
+                </div>
+
+                <div class="class-input-group">
+                    <label>3. 其他</label>
+                    <textarea id="other-input" rows="3" placeholder="其他事項..."></textarea>
+                </div>
+
+                <button id="btn-gen-class" class="action-btn" onclick="generateClassLog()">生成/更新日誌</button>
+            </div>
+            <div class="right-panel">
+                <div class="panel-title">日誌預覽</div>
+                <div id="class-output">
+                    <div style="color: var(--text-muted); text-align: center; margin-top: 20px;">
+                        請在左側輸入指令並點擊生成
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="api-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>設定 Google AI API Key</h3>
+            <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9rem;">
+                您的 Key 僅會儲存在本地瀏覽器中。
+            </p>
+            <input type="text" id="api-key-input" placeholder="Paste your API Key here">
+            <button class="action-btn" style="width: 100%" onclick="saveApiKey()">儲存</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let apiKey = localStorage.getItem('google_ai_api_key');
+        
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!apiKey) {
+                document.getElementById('api-modal').style.display = 'flex';
+            }
+        });
+
+        // --- Navigation ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.workspace').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            // Set active button state
+            const btnIndex = tabId === 'teaching-log' ? 0 : 1;
+            document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
+
+            // Set Title
+            document.getElementById('page-title').innerText = tabId === 'teaching-log' ? '教學日誌' : '帶班日誌';
+        }
+
+        // --- API Key Handling ---
+        function openModal() {
+            document.getElementById('api-key-input').value = apiKey || '';
+            document.getElementById('api-modal').style.display = 'flex';
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input').value.trim();
+            if (input) {
+                apiKey = input;
+                localStorage.setItem('google_ai_api_key', apiKey);
+                document.getElementById('api-modal').style.display = 'none';
+            } else {
+                alert('請輸入有效的 API Key');
+            }
+        }
+
+        // --- Core AI Function ---
+        async function callGeminiAPI(systemPrompt, userPrompt) {
+            if (!apiKey) {
+                alert('請先設定 API Key');
+                openModal();
+                throw new Error('No API Key');
+            }
+
+            // Using standard endpoint structure.
+            const model = "gemini-2.0-flash"; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [{ text: userPrompt }]
+                }],
+                system_instruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    temperature: 0.7,
+                }
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error('API Error:', error);
+                alert(`API Error: ${error.message}. 請確認 Key 是否正確或模型是否可用。`);
+                throw error;
+            }
+        }
+
+        // --- Feature 1: Teaching Log ---
+        async function generateTeachingLog() {
+            const input = document.getElementById('teaching-input').value;
+            if (!input.trim()) {
+                alert('請輸入內容');
+                return;
+            }
+
+            const btn = document.getElementById('btn-gen-teaching');
+            const outputDiv = document.getElementById('teaching-output');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> 處理中...';
+            outputDiv.innerHTML = '';
+
+            const systemPrompt = `
+                你是一個專業的教學日誌回覆助手。請遵循以下規則：
+                1. **解析輸入與辨識姓名**：
+                   - 使用者會貼上從網頁表格複製的雜亂文字，請仔細分辨「大學伴(老師)」與「小學伴(學生)」。
+                   - **典型表格資料順序**：通常為 [日期] -> [時間] -> [大學校名] -> [小學校名] -> **[大學伴姓名]** -> [小學伴姓名] -> [內容]。
+                   - **關鍵辨識邏輯**：
+                     - 當看到連續的學校名稱（如：國立嘉義大學...中學）後接續出現的兩個名字，**第一個名字**通常是大學伴，第二個是小學伴。
+                     - 範例：輸入「國立嘉義大學 南投縣立草屯國民中學 劉宥君 洪榮鴻」，大學伴是「劉宥君」（要對他回覆），小學伴是「洪榮鴻」。
+                     - 請務必抓取「大學伴」的名字作為回覆對象。
+                
+                2. **姓名格式處理**：
+                   - 辨識出大學伴姓名後：
+                   - 若為單姓複名（如：劉宥君），只稱呼名（宥君）。
+                   - 若為單名（如：李偉）或複姓（如：歐陽琮），請稱呼全名。
+
+                3. **內容檢查規則**：
+                   - [重要] 如果該名學生的日誌內容描述少於 5 個字（過於簡略），回覆內容請直接寫：「請多寫一點，以便更全面地了解學生的學習狀況。」
+
+                4. **安全示警偵測**（最優先）：
+                   - 請詳細檢查日誌內容是否包含：霸凌、被欺負、肢體/言語衝突、打架、性平事件（騷擾、性別歧視）、家暴、家庭失能等關鍵字或情境。
+                   - 若偵測到上述危險內容，請在輸出中標記 \`hasWarning: true\` 並在 \`warningReason\` 填寫警告類型（例如：警告：疑似霸凌事件）。
+                   - 若無，則 \`hasWarning: false\`。
+
+                5. **回覆生成原則**：
+                   - 語氣：非常正向、鼓勵性質。
+                   - 開頭：固定使用「謝謝[處理後的姓名]用心準備教學」。
+                   - 內容：鼓勵他這週的表現，並給予可以進步的建議（不用寫建議二字）。
+                   - **嚴格禁止使用任何 Emoji**。
+
+                6. **輸出格式**：
+                   - 請直接回覆一個 JSON 陣列 (Array of Objects)，不要有 markdown code block 標記。
+                   - 格式：[{"name": "顯示姓名", "reply": "回覆內容", "hasWarning": boolean, "warningReason": "警告文字(若無則空字串)"}, ...]
+            `;
+
+            try {
+                // Pre-process prompt to ensure JSON output
+                const jsonPrompt = input + "\n\n請依據上述內容，產生符合規則的 JSON 陣列。";
+                
+                let rawText = await callGeminiAPI(systemPrompt, jsonPrompt);
+                
+                // Clean up markdown if AI adds it
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                const results = JSON.parse(rawText);
+
+                results.forEach(item => {
+                    const card = document.createElement('div');
+                    
+                    // Determine styles based on warning
+                    const isAlert = item.hasWarning === true;
+                    const alertClass = isAlert ? 'alert' : '';
+                    const warningHtml = isAlert ? `<span class="warning-tag">${item.warningReason}</span>` : '';
+
+                    card.className = `log-entry-card ${alertClass}`;
+                    card.innerHTML = `
+                        <div class="log-name">
+                            ${item.name}
+                            ${warningHtml}
+                        </div>
+                        <div class="log-content">${item.reply}</div>
+                    `;
+                    outputDiv.appendChild(card);
+                });
+
+            } catch (e) {
+                outputDiv.innerHTML = `<div style="color: #ff6b6b">發生錯誤，請重試。<br>詳細: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '產生回覆';
+            }
+        }
+
+        // --- Feature 2: Class Log ---
+        async function generateClassLog() {
+            const instruction = document.getElementById('class-instruction').value;
+            const envText = document.getElementById('env-input').value;
+            const learnText = document.getElementById('learning-input').value;
+            const otherText = document.getElementById('other-input').value;
+
+            const btn = document.getElementById('btn-gen-class');
+            const outputDiv = document.getElementById('class-output');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> 生成中...';
+
+            const systemPrompt = `
+                你是一個帶班日誌助手。
+                你的任務是根據「當前內容」以及使用者的「指令」，重新生成或修改這三部分的日誌內容。
+                
+                欄位包含：
+                1. 系統環境
+                2. 整體學習狀況
+                3. 其他
+
+                規則：
+                - 若使用者沒有特殊指令，保持原樣或僅做修飾。
+                - 若有指令（例如：今天網路不穩），請將其自然融入對應的欄位（如系統環境）中，並重新編號。
+                - 保持專業、客觀的語氣。
+                - **嚴格禁止使用任何 Emoji**。
+                - 使用繁體中文。
+                - 輸出格式：請直接回覆一個 JSON 物件，不要 markdown 標記。
+                - 格式：{"environment": "...", "learning": "...", "others": "..."}
+            `;
+
+            const userPrompt = `
+                【指令】：${instruction}
+
+                【目前內容 1. 系統環境】：
+                ${envText}
+
+                【目前內容 2. 整體學習狀況】：
+                ${learnText}
+
+                【目前內容 3. 其他】：
+                ${otherText}
+            `;
+
+            try {
+                let rawText = await callGeminiAPI(systemPrompt, userPrompt);
+                 // Clean up markdown
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                const result = JSON.parse(rawText);
+
+                // Render Output
+                outputDiv.innerHTML = `
+                    <div class="result-section">
+                        <h3>1. 系統環境</h3>
+                        <div class="result-block">${result.environment}</div>
+                    </div>
+                    <div class="result-section">
+                        <h3>2. 整體學習狀況</h3>
+                        <div class="result-block">${result.learning}</div>
+                    </div>
+                    <div class="result-section">
+                        <h3>3. 其他</h3>
+                        <div class="result-block">${result.others || '無'}</div>
+                    </div>
+                `;
+
+            } catch (e) {
+                outputDiv.innerHTML = `<div style="color: #ff6b6b">發生錯誤: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '生成/更新日誌';
+            }
+        }
+    </script>
+</body>
+</html>
