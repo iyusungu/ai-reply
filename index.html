@@ -302,13 +302,46 @@
             transition: background-color 0.3s;
         }
 
+        /* Header Row for Name and Copy Button */
+        .log-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
         .log-name {
             font-weight: bold;
-            margin-bottom: 8px;
             color: var(--accent-color);
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        /* Copy Button Styles */
+        .copy-btn {
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .copy-btn:hover {
+            background-color: #666;
+            border-color: #888;
+        }
+
+        .copy-btn.copied {
+            background-color: #388e3c; /* Green color for success */
+            border-color: #388e3c;
+            color: #fff;
         }
         
         .log-content {
@@ -644,7 +677,7 @@
         let requestCount = 0;
         let totalTokenCount = 0;
 
-        // User Preferred Models
+        // User Preferred Models (Restored Full List)
         const modelList = [
             "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", 
             "gemini-2.0-flash-001", "gemini-2.0-flash-lite-001", "gemini-2.0-flash-lite", 
@@ -850,6 +883,33 @@
             }
         }
 
+        // --- Copy Functionality (NEW) ---
+        function copyCardContent(btn) {
+            // 找到按鈕所在的卡片
+            const card = btn.closest('.log-entry-card');
+            if (!card) return;
+
+            // 取得該卡片中的內容文字
+            const content = card.querySelector('.log-content').innerText;
+
+            // 執行複製
+            navigator.clipboard.writeText(content).then(() => {
+                // UI 回饋：變色並顯示「已複製」
+                const originalText = btn.innerHTML; // 保存原本的按鈕內容
+                btn.innerText = '已複製';
+                btn.classList.add('copied');
+
+                // 2秒後恢復原狀
+                setTimeout(() => {
+                    btn.innerHTML = '複製內容'; // 或改回原本的圖示/文字
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                alert('複製失敗，請手動複製。');
+            });
+        }
+
         // --- Feature 1: Teaching Log (Updated Logic) ---
         async function generateTeachingLog() {
             const input = document.getElementById('teaching-input').value;
@@ -920,7 +980,6 @@
                     let cardClass = '';
                     let statusHtml = '';
                     
-                    // Fallback for older prompts if status is undefined
                     const status = item.status || (item.hasWarning ? 'alert' : 'normal');
 
                     if (status === 'alert') {
@@ -932,10 +991,15 @@
                     }
 
                     card.className = `log-entry-card ${cardClass}`;
+                    
+                    // 修改這裡：加入 Flex Header 與 複製按鈕
                     card.innerHTML = `
-                        <div class="log-name">
-                            ${item.name}
-                            ${statusHtml}
+                        <div class="log-header-row">
+                            <div class="log-name">
+                                ${item.name}
+                                ${statusHtml}
+                            </div>
+                            <button class="copy-btn" onclick="copyCardContent(this)">複製內容</button>
                         </div>
                         <div class="log-content">${item.reply}</div>
                     `;
